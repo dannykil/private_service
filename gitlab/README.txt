@@ -24,6 +24,7 @@ git remote add personal git@localhost:personal/private_service.git
 git push <원격저장소_이름> <브랜치_이름>
 git push origin master
 git push personal master
+git push --set-upstream personal master
 3) 현재 등록된 원격 저장소 확인
 git remote -v
 

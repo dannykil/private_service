@@ -1,0 +1,24 @@
+/airflow/logs
+# /airflow/data
+# /argocd/logs
+# /argocd/data
+/gitlab/data
+/gitlab/logs
+/grafana/data
+# /grafana/logs
+/jenkins/jenkins_data
+# /jenkins/logs
+# /kong_gateway/data
+# /kong_gateway/logs
+# /kubernetes/logs
+# /kubernetes/data
+# /lite_llm/data
+# /lite_llm/logs
+# /n8n/data
+# /n8n/logs
+# /nexus/data
+# /nexus/logs
+/prometheus/data
+# /prometheus/logs
+# /ragas/data
+# /ragas/logs

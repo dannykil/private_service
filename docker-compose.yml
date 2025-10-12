@@ -1,0 +1,100 @@
+version: '3.7'
+
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml # 경로 수정
+      # - prometheus_data:/prometheus # 프로메테우스 데이터 볼륨 추가
+      - ./prometheus/data:/prometheus # 프로메테우스 데이터 경로 변경
+    ports:
+      - '9090:9090'
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      # - --web.enable-admin-api
+      # - --web.enable-lifecycle
+      # # - --config.file=/etc/prometheus/prometheus.yml
+      # - --storage.tsdb.path=/prometheus
+      # - --web.console.libraries=/usr/share/prometheus/console_libraries
+      # - --web.console.templates=/usr/share/prometheus/consoles
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - '3000:3000'
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      # - GF_SECURITY_ADMIN_PASSWORD=my_admin_password
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      # - grafana_data:/var/lib/grafana # 그라파나 데이터 볼륨 추가
+      - ./grafana/data:/var/lib/grafana # 그라파나 데이터 경로 변경
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: ./jenkins/Dockerfile # Dockerfile 경로 지정
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      # - '8080:8080'
+      - '8081:8080' # 8081번 포트를 사용하도록 변경
+      - '50000:50000'
+    volumes:
+      - ./jenkins/jenkins_data:/var/jenkins_home
+      # Docker-in-Docker 기능을 위한 설정 (선택 사항)
+      # - /var/run/docker.sock:/var/run/docker.sock
+      # - /usr/bin/docker:/usr/bin/docker
+    restart: unless-stopped
+
+  gitlab:
+    build:
+      context: ./gitlab
+      dockerfile: ./gitlab/Dockerfile
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    hostname: 'localhost'
+    ports:
+      - '443:443'
+      - '80:80'
+      - '22:22'
+    volumes:
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/data:/var/opt/gitlab
+    shm_size: '256m'
+    # restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        gitlab_rails['smtp_enable'] = true;
+        gitlab_rails['smtp_address'] = "smtp.gmail.com";
+        gitlab_rails['smtp_port'] = 587;
+        gitlab_rails['smtp_user_name'] = "danniel.kil@gmail.com";
+        gitlab_rails['smtp_password'] = "eaif ruwc neky jzxh";
+        gitlab_rails['smtp_domain'] = "gmail.com";
+        gitlab_rails['smtp_authentication'] = "login";
+        gitlab_rails['smtp_enable_starttls_auto'] = true;
+        gitlab_rails['gitlab_email_enabled'] = true;
+        gitlab_rails['gitlab_email_from'] = "gitlab_admin_63500f@example.com";
+        gitlab_rails['gitlab_email_display_name'] = 'GitLab';
+        external_url 'http://localhost';
+
+  # statsd_exporter:
+  #   image: prom/statsd-exporter:v0.18.0
+  #   restart: always
+  #   volumes:
+  #     - ./airflow/files/statsd_mapping.yml:/tmp/statsd_mapping.yml
+  #   ports:
+  #     - '9102:9102'
+  #     - '9125:9125/udp'
+  #   command: --statsd.mapping-config=/tmp/statsd_mapping.yml
+
+# volumes 주석 처리(로컬 머신에 파일로 저장)
+# volumes:
+#   prometheus_data:
+#   grafana_data:

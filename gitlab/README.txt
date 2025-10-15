@@ -3,6 +3,21 @@
 root
 2) 초기 패스워드
 docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password
+docker logs gitlab | grep 'Password'
+
+### 비밀번호 재설정 방법
+1) 컨테이너 내부로 접속
+docker exec -it gitlab /bin/bash
+2) GitLab Rails 콘솔 실행
+gitlab-rails console
+3) 새 비밀번호 설정
+user = User.find_by_username('root')
+user.password = 'P@ssw0rd12#$'
+4) 변경 내용 저장(아래 입력해야함)
+user.save!
+5) 콘솔 종료
+exit
+
 
 ### 사용자 invite
 1) group 및 project 생성

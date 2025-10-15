@@ -46,7 +46,7 @@ services:
       - '8081:8080' # 8081번 포트를 사용하도록 변경
       - '50000:50000'
     volumes:
-      - ./jenkins/jenkins_data:/var/jenkins_home
+      - ./jenkins/data:/var/jenkins_home
       # Docker-in-Docker 기능을 위한 설정 (선택 사항)
       # - /var/run/docker.sock:/var/run/docker.sock
       # - /usr/bin/docker:/usr/bin/docker
@@ -84,6 +84,78 @@ services:
         gitlab_rails['gitlab_email_display_name'] = 'GitLab';
         external_url 'http://localhost';
 
+  # Kong Gateway Database
+  kong-database:
+    image: postgres:13
+    container_name: kong-database
+    networks:
+      - kong-net
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_DB: kong
+      POSTGRES_PASSWORD: kong
+    command: -c max_connections=200
+    volumes:
+      - ./kong_gateway/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kong -d kong']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Kong Gateway
+  kong-gateway:
+    build:
+      context: ./kong_gateway
+      dockerfile: Dockerfile
+    container_name: kong-gateway
+    networks:
+      - kong-net
+    ports:
+      - '8020:8000'
+      - '8443:8443'
+      - '8030:8030'
+      - '8444:8444'
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8030
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Kong Manager (UI)
+  kong-manager:
+    build:
+      context: ./kong_gateway
+      dockerfile: Dockerfile
+    container_name: kong-manager
+    networks:
+      - kong-net
+    ports:
+      - '22222:22222'
+      - '8445:8445'
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_ADMIN_LISTEN: 0.0.0.0:8030,0.0.0.0:8444 ssl
+      KONG_ADMIN_GUI_LISTEN: 0.0.0.0:22222,0.0.0.0:8445 ssl
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    restart: unless-stopped
+
   # statsd_exporter:
   #   image: prom/statsd-exporter:v0.18.0
   #   restart: always
@@ -94,6 +166,9 @@ services:
   #     - '9125:9125/udp'
   #   command: --statsd.mapping-config=/tmp/statsd_mapping.yml
 
+networks:
+  kong-net:
+    driver: bridge
 # volumes 주석 처리(로컬 머신에 파일로 저장)
 # volumes:
 #   prometheus_data:

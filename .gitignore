@@ -6,9 +6,9 @@
 /gitlab/logs
 /grafana/data
 # /grafana/logs
-/jenkins/jenkins_data
+/jenkins/data
 # /jenkins/logs
-# /kong_gateway/data
+/kong_gateway/data
 # /kong_gateway/logs
 # /kubernetes/logs
 # /kubernetes/data

@@ -20,10 +20,12 @@ NC='\033[0m' # No Color
 # =============================================================================
 
 # GCS 버킷 설정 (필수)
-GCS_BUCKET="${GCS_BUCKET:-gs://your-backup-bucket-name}"
+# GCS_BUCKET="${GCS_BUCKET:-gs://your-backup-bucket-name}"
+GCS_BUCKET="gs://private_service"
 
 # 프로젝트 ID 설정 (선택사항)
-GCP_PROJECT_ID="${GCP_PROJECT_ID:-your-project-id}"
+# GCP_PROJECT_ID="${GCP_PROJECT_ID:-your-project-id}"
+GCP_PROJECT_ID="hist-poc-use-cases"
 
 # 백업 설정 (선택사항)
 BACKUP_ROOT_DIR="${BACKUP_ROOT_DIR:-./backups}"
@@ -54,15 +56,25 @@ LOG_FILENAME="backup_$TIMESTAMP.log"
 LOG_FILE="$LOG_DIR/$LOG_FILENAME"
 
 # 백업할 서비스들 정의 (data 또는 logs 폴더가 있는 서비스들)
+# SERVICES=(
+#     "airflow:airflow/logs"
+#     "gitlab:gitlab/data:gitlab/logs"
+#     "grafana:grafana/data"
+#     "jenkins:jenkins/data"
+#     "kong_gateway:kong_gateway/data"
+#     "ollama:ollama/data"
+#     "open_web_ui:open_web_ui/data"
+#     "prometheus:prometheus/data"
+# )
 SERVICES=(
-    "airflow:airflow/logs"
-    "gitlab:gitlab/data:gitlab/logs"
-    "grafana:grafana/data"
-    "jenkins:jenkins/data"
-    "kong_gateway:kong_gateway/data"
-    "ollama:ollama/data"
-    "open_web_ui:open_web_ui/data"
-    "prometheus:prometheus/data"
+    "airflow:logs"
+    "gitlab:data:logs"
+    "grafana:data"
+    "jenkins:data"
+    "kong_gateway:data"
+    "ollama:data"
+    "open_web_ui:data"
+    "prometheus:data"
 )
 
 # 로그 함수

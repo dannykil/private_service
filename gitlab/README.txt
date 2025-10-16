@@ -52,9 +52,14 @@ git remote set-url --add --push origin [개인_리포지토리_URL]
 git remote set-url --add --push origin [회사_리포지토리_URL]
 git remote set-url --add --push origin https://github.com/dannykil/private_service.git
 git remote set-url --add --push origin git@localhost:personal/private_service.git
+git remote set-url --add --push origin https://bitbucket.hist.co.kr/scm/hx-us/private_service.git
+
 git remote set-url --add --push origin 
 * 실패하는 경우 강제로 push
 git push origin master --force
+3) 삭제할 푸시 URL 지정
+git remote set-url --delete --push origin git@localhost:personal/private_service.git
+
 
 ### ssh key 생성
 1) SSH 키가 있는지 확인

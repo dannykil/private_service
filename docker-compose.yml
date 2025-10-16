@@ -105,6 +105,25 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  # Kong Migration (데이터베이스 초기화)
+  kong-migration:
+    build:
+      context: ./kong_gateway
+      dockerfile: Dockerfile
+    container_name: kong-migration
+    networks:
+      - kong-net
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+    command: kong migrations bootstrap
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    restart: on-failure
+
   # Kong Gateway
   kong-gateway:
     build:
@@ -131,6 +150,8 @@ services:
     depends_on:
       kong-database:
         condition: service_healthy
+      kong-migration:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   # Kong Manager (UI)
@@ -154,6 +175,8 @@ services:
     depends_on:
       kong-database:
         condition: service_healthy
+      kong-migration:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   # statsd_exporter:

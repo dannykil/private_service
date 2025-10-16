@@ -18,6 +18,10 @@
 # /n8n/logs
 # /nexus/data
 # /nexus/logs
+/open_web_ui/data
+# /open_web_ui/logs
+/ollama/data
+# /ollama/logs
 /prometheus/data
 # /prometheus/logs
 # /ragas/data

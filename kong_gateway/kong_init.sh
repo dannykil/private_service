@@ -2,10 +2,12 @@
 echo "Kong Gateway 초기화 시작..."
 
 # 기존 컨테이너 정리
-docker-compose stop kong-gateway kong-manager kong-database 2>/dev/null || true
+# docker-compose stop kong-gateway kong-manager kong-database 2>/dev/null || true
+docker compose stop kong-gateway kong-manager kong-database 2>/dev/null || true
 
 # 데이터베이스만 시작
-docker-compose up -d kong-database
+# docker-compose up -d kong-database
+docker compose up -d kong-database
 
 # 데이터베이스 준비 대기 (서버 환경에서는 더 길게)
 sleep 20
@@ -21,7 +23,8 @@ docker run --rm --network kong-net \
 
 if [ $? -eq 0 ]; then
     echo "초기화 성공! Kong 서비스 시작 중..."
-    docker-compose up -d kong-gateway kong-manager
+    # docker-compose up -d kong-gateway kong-manager
+    docker compose up -d kong-gateway kong-manager
     echo "Kong Gateway 설치 완료!"
 else
     echo "초기화 실패!"

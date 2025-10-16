@@ -166,6 +166,31 @@ services:
   #     - '9125:9125/udp'
   #   command: --statsd.mapping-config=/tmp/statsd_mapping.yml
 
+  open-webui:
+    # image: my-open-webui:latest
+    build: ./open_web_ui # Dockerfile이 현재 디렉터리에 있음을 의미
+    ports:
+      - '4000:8080'
+    volumes:
+      - ./open_web_ui/data:/app/backend/data # Open WebUI 데이터 볼륨
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - '11434:11434'
+    volumes:
+      - ./ollama/data:/root/.ollama # Ollama 데이터 볼륨
+    restart: unless-stopped
+    # Ollama가 GPU를 사용하도록 설정 (선택 사항)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
 networks:
   kong-net:
     driver: bridge

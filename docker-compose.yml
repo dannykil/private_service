@@ -176,7 +176,10 @@ services:
     restart: unless-stopped
 
   ollama:
-    image: ollama/ollama:latest
+    # image: ollama/ollama:latest
+    build:
+      context: ./ollama
+      dockerfile: Dockerfile
     ports:
       - '11434:11434'
     volumes:

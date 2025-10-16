@@ -1,5 +1,6 @@
 # base image를 설정합니다. Open WebUI의 공식 이미지를 사용합니다.
-FROM ghcr.io/open-webui/open-webui:main
+# FROM ghcr.io/open-webui/open-webui:main
+FROM ghcr.io/open-webui/open-webui:0.6.5
 
 # 필요한 경우, 추가적인 환경 변수를 여기서 설정할 수 있습니다.
 # 예를 들어, UI 테마나 기타 설정을 미리 정의할 수 있습니다.

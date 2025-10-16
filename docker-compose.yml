@@ -35,21 +35,24 @@ services:
   #   depends_on:
   #     - prometheus
   #   restart: unless-stopped
-  # jenkins:
-  #   build:
-  #     context: ./jenkins
-  #     dockerfile: ./jenkins/Dockerfile # Dockerfile 경로 지정
-  #   image: jenkins/jenkins:lts
-  #   container_name: jenkins
-  #   ports:
-  #     # - '8080:8080'
-  #     - '8081:8080' # 8081번 포트를 사용하도록 변경
-  #     - '50000:50000'
-  #   volumes:
-  #     - ./jenkins/data:/var/jenkins_home
-  #     # Docker-in-Docker 기능을 위한 설정 (선택 사항)
-  #     # - /var/run/docker.sock:/var/run/docker.sock
-  #     # - /usr/bin/docker:/usr/bin/docker
+
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: ./jenkins/Dockerfile # Dockerfile 경로 지정
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - '8080:8080'
+      # - '8081:8080' # 8081번 포트를 사용하도록 변경
+      - '50000:50000'
+    volumes:
+      # - ./jenkins/data:/var/jenkins_home # 로컬
+      - jenkins_home:/var/jenkins_home # 서버
+      # Docker-in-Docker 기능을 위한 설정
+      - /var/run/docker.sock:/var/run/docker.sock # Docker 소켓 마운트
+      - /usr/bin/docker:/usr/bin/docker # Docker 바이너리
+      - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose # Docker Compose 바이너리
   #   restart: unless-stopped
 
   # gitlab:

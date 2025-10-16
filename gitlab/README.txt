@@ -42,6 +42,19 @@ git push personal master
 git push --set-upstream personal master
 3) 현재 등록된 원격 저장소 확인
 git remote -v
+* 여러 repository 동시에 push 하기
+1) 새로운 원격 저장소 추가
+git remote add company-repo [회사_리포지토리_URL]
+2) 한 번에 푸시하도록 설정
+# 첫 번째 푸시 URL(개인 리포지토리)
+git remote set-url --add --push origin [개인_리포지토리_URL]
+# 두 번째 푸시 URL(회사 리포지토리)
+git remote set-url --add --push origin [회사_리포지토리_URL]
+git remote set-url --add --push origin https://github.com/dannykil/private_service.git
+git remote set-url --add --push origin git@localhost:personal/private_service.git
+git remote set-url --add --push origin 
+* 실패하는 경우 강제로 push
+git push origin master --force
 
 ### ssh key 생성
 1) SSH 키가 있는지 확인

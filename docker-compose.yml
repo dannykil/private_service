@@ -226,6 +226,7 @@ networks:
     driver: bridge
 
 volumes:
-  jenkins_home: # Jenkins 데이터 볼륨
+  jenkins_home: # Jenkins 데이터 볼륨(서버전용, 로컬에서는 사용안함)
+    external: true # 기존에 존재하는 jenkins_home 볼륨 사용
 #   prometheus_data:
 #   grafana_data:

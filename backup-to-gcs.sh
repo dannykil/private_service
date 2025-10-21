@@ -106,6 +106,7 @@ usage() {
     echo "  --bucket BUCKET_NAME    GCS 버킷 이름 설정"
     echo "  --service SERVICE_NAME  특정 서비스만 백업"
     echo "  --dry-run              실제 업로드 없이 테스트만 실행"
+    echo "  --debug                디버깅 정보 출력"
     echo "  --help                 도움말 표시"
     echo ""
     echo -e "${YELLOW}환경변수:${NC}"
@@ -145,12 +146,24 @@ precheck() {
     fi
     log "${GREEN}✅ 서비스 계정 키 파일 확인 완료${NC}"
 
+    # 서비스 계정 활성화 (gsutil이 환경 변수를 무시하는 경우 대비)
+    log "${BLUE}🔐 서비스 계정 인증을 활성화합니다...${NC}"
+    if command -v gcloud &> /dev/null; then
+        if gcloud auth activate-service-account --key-file="$SERVICE_ACCOUNT_KEY" >> "$LOG_FILE" 2>&1; then
+            log "${GREEN}✅ gcloud 서비스 계정 활성화 완료${NC}"
+        else
+            log "${YELLOW}⚠️  경고: gcloud 서비스 계정 활성화 실패 (gsutil 환경 변수로 재시도)${NC}"
+        fi
+    else
+        log "${YELLOW}⚠️  gcloud가 설치되지 않음. GOOGLE_APPLICATION_CREDENTIALS 환경 변수만 사용합니다.${NC}"
+    fi
 
     # GCS 인증 확인 (서비스 계정을 사용하여 접근 테스트)
     # gsutil 경로를 명시적으로 사용하여 crontab 환경 문제 방지
     if ! "$GSUTIL_PATH" ls "$GCS_BUCKET" &> /dev/null; then
         log "${RED}❌ 오류: GCS 버킷에 접근할 수 없습니다. (버킷 이름 혹은 서비스 계정 권한 문제)${NC}"
         log "${YELLOW}💡 GCS 버킷 이름($GCS_BUCKET)과 서비스 계정의 'Storage Object Admin' 권한을 확인해주세요.${NC}"
+        log "${YELLOW}💡 디버깅: gcloud auth list 및 gsutil version -l을 실행해보세요.${NC}"
         exit 1
     fi
 
@@ -263,10 +276,57 @@ cleanup() {
     log "${GREEN}✅ 정리 완료${NC}"
 }
 
+# 디버깅 정보 출력 함수
+debug_info() {
+    log "${PURPLE}🐛 디버깅 정보:${NC}"
+    log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    log "${CYAN}[환경 정보]${NC}"
+    log "• 현재 사용자: $(whoami)"
+    log "• 작업 디렉토리: $(pwd)"
+    log "• 서비스 계정 키: $SERVICE_ACCOUNT_KEY"
+    log "• 키 파일 존재: $([ -f "$SERVICE_ACCOUNT_KEY" ] && echo "✅ Yes" || echo "❌ No")"
+    log "• GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS"
+    
+    log "${CYAN}[GCloud 인증 정보]${NC}"
+    if command -v gcloud &> /dev/null; then
+        log "• gcloud 버전: $(gcloud --version | head -n1)"
+        log "• 활성 계정:"
+        gcloud auth list 2>&1 | while IFS= read -r line; do log "  $line"; done
+        log "• 현재 프로젝트: $(gcloud config get-value project 2>/dev/null || echo 'Not set')"
+    else
+        log "• gcloud: ❌ 설치되지 않음"
+    fi
+    
+    log "${CYAN}[GSUtil 정보]${NC}"
+    if command -v gsutil &> /dev/null; then
+        log "• gsutil 경로: $(which gsutil)"
+        log "• gsutil 버전: $(gsutil version -l 2>&1 | head -n1)"
+        log "• boto 설정 파일: $([ -f ~/.boto ] && echo "✅ ~/.boto 존재" || echo "❌ ~/.boto 없음")"
+    else
+        log "• gsutil: ❌ 설치되지 않음"
+    fi
+    
+    log "${CYAN}[GCS 버킷 접근 테스트]${NC}"
+    log "• 버킷: $GCS_BUCKET"
+    if gsutil ls "$GCS_BUCKET" &> /dev/null; then
+        log "• 접근 상태: ✅ 성공"
+        log "• 버킷 내용 (최근 5개):"
+        gsutil ls "$GCS_BUCKET" 2>&1 | head -n5 | while IFS= read -r line; do log "  $line"; done
+    else
+        log "• 접근 상태: ❌ 실패"
+        log "• 오류 상세:"
+        gsutil ls "$GCS_BUCKET" 2>&1 | while IFS= read -r line; do log "  $line"; done
+    fi
+    
+    log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
+
 # 메인 실행 함수
 main() {
     local specific_service=""
     local dry_run=false
+    local debug_mode=false
 
     # 인자 처리
     while [[ $# -gt 0 ]]; do
@@ -281,6 +341,10 @@ main() {
                 ;;
             --dry-run)
                 dry_run=true
+                shift
+                ;;
+            --debug)
+                debug_mode=true
                 shift
                 ;;
             --help)
@@ -312,6 +376,13 @@ main() {
 
     # 사전 체크
     precheck
+
+    # 디버그 모드 실행
+    if [ "$debug_mode" = true ]; then
+        debug_info
+        log "${YELLOW}🔍 디버그 모드 종료. 백업을 진행하려면 --debug 옵션 없이 실행하세요.${NC}"
+        exit 0
+    fi
 
     # 백업 실행
     if [ -n "$specific_service" ]; then

@@ -102,6 +102,10 @@ usage() {
     echo -e "${YELLOW}사용법:${NC}"
     echo "  $0 [옵션]"
     echo ""
+    echo -e "${YELLOW}중요:${NC}"
+    echo "  • Docker 볼륨 백업을 위해 sudo 권한이 필요합니다"
+    echo "  • 스크립트 실행 시 sudo 비밀번호를 입력해야 할 수 있습니다"
+    echo ""
     echo -e "${YELLOW}옵션:${NC}"
     echo "  --bucket BUCKET_NAME    GCS 버킷 이름 설정"
     echo "  --service SERVICE_NAME  특정 서비스만 백업"
@@ -130,6 +134,15 @@ precheck() {
 
     # 로그 디렉토리 생성
     create_log_directory
+
+    # sudo 권한 확인 (Docker 볼륨 백업을 위해 필요)
+    log "${BLUE}🔑 sudo 권한을 확인합니다...${NC}"
+    if ! sudo -v &> /dev/null; then
+        log "${RED}❌ 오류: sudo 권한이 필요합니다.${NC}"
+        log "${YELLOW}💡 Docker 볼륨을 백업하려면 sudo 권한이 필요합니다.${NC}"
+        exit 1
+    fi
+    log "${GREEN}✅ sudo 권한 확인 완료${NC}"
 
     # Google Cloud SDK (gsutil) 확인
     if ! command -v "$GSUTIL_PATH" &> /dev/null; then
@@ -204,8 +217,10 @@ backup_service() {
             # 압축 파일 이름 생성
             local compressed_file="$TEMP_DIR/$(basename "$path" | tr '/' '_')_$TIMESTAMP.tar.gz"
 
-            # 압축 실행
-            if tar -czf "$compressed_file" -C "$service_name" "$path" 2>> "$LOG_FILE"; then
+            # 압축 실행 (sudo 사용하여 권한 문제 해결)
+            if sudo tar -czf "$compressed_file" -C "$service_name" "$path" 2>> "$LOG_FILE"; then
+                # 생성된 파일의 소유권을 현재 사용자로 변경
+                sudo chown $(whoami):$(whoami) "$compressed_file" 2>> "$LOG_FILE"
                 log "${GREEN}✅ 압축 완료: $compressed_file${NC}"
 
                 # GCS 업로드

@@ -70,14 +70,14 @@ LOG_FILE="$LOG_DIR/$LOG_FILENAME"
 
 # 백업할 서비스들 정의 (data 또는 logs 폴더가 있는 서비스들)
 SERVICES=(
-    "airflow:logs"
-    "gitlab:data:logs"
-    "grafana:data"
-    "jenkins:data"
+    # "airflow:logs"
+    # "gitlab:data:logs"
+    # "grafana:data"
+    # "jenkins:data"
     "kong_gateway:data"
-    "ollama:data"
-    "open_web_ui:data"
-    "prometheus:data"
+    # "ollama:data"
+    # "open_web_ui:data"
+    # "prometheus:data"
 )
 
 # 로그 함수

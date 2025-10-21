@@ -20,8 +20,8 @@ NC='\033[0m' # No Color
 # =============================================================================
 
 # 🚨 서비스 계정 키 파일 절대 경로 (필수)
-# SERVICE_ACCOUNT_KEY="/home/gpuadmin/private_service/secret_keys/hist-poc-use-cases-54b0305f7e4e.json"
-SERVICE_ACCOUNT_KEY="/Users/danniel.kil/Documents/workspace/private_service/secret_keys/hist-poc-use-cases-54b0305f7e4e.json"
+SERVICE_ACCOUNT_KEY="/home/gpuadmin/private_service/secret_keys/hist-poc-use-cases-54b0305f7e4e.json"
+# SERVICE_ACCOUNT_KEY="/Users/danniel.kil/Documents/workspace/private_service/secret_keys/hist-poc-use-cases-54b0305f7e4e.json"
 
 # GCS 버킷 설정 (필수)
 GCS_BUCKET="gs://private_service"

@@ -165,21 +165,39 @@ docker system prune
    gsutil mb gs://your-backup-bucket-name
    ```
 
-2. **인증 설정**
+2. **서비스 계정 생성 및 키 다운로드**
+
+   Google Cloud Console에서:
+
+   - IAM & Admin > Service Accounts로 이동
+   - 새 서비스 계정 생성
+   - **Storage Object Admin** 역할 부여
+   - 키 생성 (JSON 형식)
+   - 다운로드한 키를 `secret_keys/` 디렉토리에 저장
 
    ```bash
-   # Google Cloud 인증
+   # 키 파일 위치 예시
+   secret_keys/your-service-account-key.json
+   ```
+
+3. **인증 설정 (선택사항 - 로컬 개발용)**
+
+   ```bash
+   # Google Cloud 인증 (선택사항)
    gcloud auth login
    gcloud config set project your-project-id
    ```
 
-3. **스크립트 설정 수정** (선택사항)
+4. **스크립트 설정 수정**
 
-   `backup-to-gcs.sh` 파일 상단의 설정 섹션에서 다음을 수정할 수 있습니다:
+   `backup-to-gcs.sh` 파일 상단의 설정 섹션에서 서비스 계정 키 경로와 GCS 버킷을 설정하세요:
 
    ```bash
-   # 필수 설정
-   GCS_BUCKET="gs://your-actual-bucket-name"    # GCS 버킷 이름
+   # 🚨 서비스 계정 키 파일 절대 경로 (필수)
+   SERVICE_ACCOUNT_KEY="/path/to/your-service-account-key.json"
+
+   # GCS 버킷 설정 (필수)
+   GCS_BUCKET="gs://your-actual-bucket-name"
 
    # 선택사항 설정
    GCP_PROJECT_ID="your-project-id"            # Google Cloud 프로젝트 ID
@@ -207,8 +225,78 @@ docker system prune
 # 백업 테스트 (실제 업로드 없이)
 ./backup-to-gcs.sh --dry-run
 
+# 디버깅 정보 출력
+./backup-to-gcs.sh --debug
+
+# Crontab 설정 가이드 확인
+./backup-to-gcs.sh --setup-cron
+
 # 도움말 확인
 ./backup-to-gcs.sh --help
+```
+
+### Crontab 자동 백업 설정
+
+정기적으로 자동 백업을 수행하려면 다음 단계를 따르세요:
+
+#### 1. Sudo 권한 설정 (비밀번호 없이 실행)
+
+Docker 볼륨 백업을 위해 sudo 권한이 필요하지만, crontab에서는 비밀번호를 입력할 수 없으므로 NOPASSWD 설정이 필요합니다.
+
+```bash
+# Sudoers 설정 파일 생성
+sudo tee /etc/sudoers.d/backup-script << 'EOF'
+# Backup script - Allow tar and chown without password
+YOUR_USERNAME ALL=(ALL) NOPASSWD: /bin/tar
+YOUR_USERNAME ALL=(ALL) NOPASSWD: /bin/chown
+EOF
+
+# 설정 파일 권한 설정
+sudo chmod 0440 /etc/sudoers.d/backup-script
+
+# 설정 검증
+sudo visudo -c
+```
+
+> ⚠️ **주의**: `YOUR_USERNAME`을 실제 사용자 이름으로 변경하세요 (예: `gpuadmin`)
+
+#### 2. Crontab 등록
+
+```bash
+# Crontab 편집
+crontab -e
+
+# 다음 내용을 추가 (매일 새벽 2시 실행 예시)
+# 서비스 백업 (매일 새벽 2시)
+0 2 * * * cd /path/to/private_service && /path/to/private_service/backup-to-gcs.sh >> /path/to/private_service/logs/backup/cron.log 2>&1
+```
+
+**Cron 스케줄 예시:**
+
+- `0 2 * * *` - 매일 새벽 2시
+- `0 */6 * * *` - 6시간마다
+- `0 0 * * 0` - 매주 일요일 자정
+- `0 3 1 * *` - 매월 1일 새벽 3시
+
+#### 3. 설정 확인
+
+```bash
+# Crontab 목록 확인
+crontab -l
+
+# 수동 테스트 실행
+./backup-to-gcs.sh
+
+# Cron 로그 확인
+tail -f ./logs/backup/cron.log
+```
+
+#### 4. 자동 설정 가이드 사용
+
+스크립트에 내장된 설정 가이드를 사용하면 더 쉽게 설정할 수 있습니다:
+
+```bash
+./backup-to-gcs.sh --setup-cron
 ```
 
 ### 백업 대상
@@ -231,6 +319,10 @@ docker system prune
 - 📊 **진행 상황**: 실시간 로그 및 진행률 표시
 - 🧹 **자동 정리**: 임시 파일 자동 삭제
 - ⚡ **병렬 처리**: 각 서비스를 독립적으로 백업
+- 🔐 **권한 관리**: Docker 볼륨 접근을 위한 sudo 권한 자동 처리
+- ☁️ **GCS 통합**: Google Cloud Storage 서비스 계정 인증
+- 🤖 **Crontab 지원**: 자동화된 정기 백업 설정 가능
+- 🐛 **디버깅 모드**: 문제 해결을 위한 상세 정보 제공
 
 ### 백업 로그
 
@@ -302,3 +394,5 @@ private_service/
 ## 폴더 복사
 
 scp -r /Users/danniel.kil/Documents/workspace/private_service root@192.168.56.30:/root/private_service
+
+export EDITOR=vim

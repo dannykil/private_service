@@ -93,6 +93,54 @@ log() {
     fi
 }
 
+# crontab 설정 가이드 함수
+setup_cron_guide() {
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}   Crontab 설정 가이드${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    echo -e "${YELLOW}1. Sudo 권한 설정 (비밀번호 없이 실행)${NC}"
+    echo ""
+    echo "다음 명령어를 실행하여 sudoers 설정 파일을 생성합니다:"
+    echo ""
+    echo -e "${GREEN}sudo tee /etc/sudoers.d/backup-script << 'EOF'
+# Backup script - Allow tar and chown without password
+$(whoami) ALL=(ALL) NOPASSWD: /bin/tar
+$(whoami) ALL=(ALL) NOPASSWD: /bin/chown
+EOF${NC}"
+    echo ""
+    echo "설정 파일 권한 설정:"
+    echo -e "${GREEN}sudo chmod 0440 /etc/sudoers.d/backup-script${NC}"
+    echo ""
+    echo "설정 검증:"
+    echo -e "${GREEN}sudo visudo -c${NC}"
+    echo ""
+    echo -e "${YELLOW}2. Crontab 등록${NC}"
+    echo ""
+    echo "crontab 편집:"
+    echo -e "${GREEN}crontab -e${NC}"
+    echo ""
+    echo "다음 내용을 추가 (매일 새벽 2시 실행 예시):"
+    echo ""
+    echo -e "${GREEN}# 서비스 백업 (매일 새벽 2시)
+0 2 * * * cd $(pwd) && $(realpath "$0") >> $(pwd)/logs/backup/cron.log 2>&1${NC}"
+    echo ""
+    echo -e "${YELLOW}3. 설정 확인${NC}"
+    echo ""
+    echo "crontab 목록 확인:"
+    echo -e "${GREEN}crontab -l${NC}"
+    echo ""
+    echo "수동 테스트 실행:"
+    echo -e "${GREEN}$(realpath "$0")${NC}"
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${PURPLE}💡 팁:${NC}"
+    echo "  • sudoers 설정 후 터미널을 재시작하세요"
+    echo "  • cron 로그는 ./logs/backup/cron.log에서 확인하세요"
+    echo "  • 테스트는 --dry-run 옵션으로 먼저 해보세요"
+    echo -e "${BLUE}========================================${NC}"
+}
+
 # 사용법 출력 함수
 usage() {
     echo -e "${BLUE}========================================${NC}"
@@ -111,6 +159,7 @@ usage() {
     echo "  --service SERVICE_NAME  특정 서비스만 백업"
     echo "  --dry-run              실제 업로드 없이 테스트만 실행"
     echo "  --debug                디버깅 정보 출력"
+    echo "  --setup-cron           crontab 설정 도움말 표시"
     echo "  --help                 도움말 표시"
     echo ""
     echo -e "${YELLOW}환경변수:${NC}"
@@ -137,12 +186,19 @@ precheck() {
 
     # sudo 권한 확인 (Docker 볼륨 백업을 위해 필요)
     log "${BLUE}🔑 sudo 권한을 확인합니다...${NC}"
-    if ! sudo -v &> /dev/null; then
+    
+    # sudoers에 NOPASSWD 설정이 되어 있는지 확인
+    if sudo -n true 2>/dev/null; then
+        log "${GREEN}✅ sudo 권한 확인 완료 (NOPASSWD 설정됨 - crontab 사용 가능)${NC}"
+    elif sudo -v &> /dev/null; then
+        log "${GREEN}✅ sudo 권한 확인 완료${NC}"
+        log "${YELLOW}💡 crontab 사용을 원하시면 --setup-cron 옵션을 참고하세요.${NC}"
+    else
         log "${RED}❌ 오류: sudo 권한이 필요합니다.${NC}"
         log "${YELLOW}💡 Docker 볼륨을 백업하려면 sudo 권한이 필요합니다.${NC}"
+        log "${YELLOW}💡 crontab 설정이 필요하면: $0 --setup-cron${NC}"
         exit 1
     fi
-    log "${GREEN}✅ sudo 권한 확인 완료${NC}"
 
     # Google Cloud SDK (gsutil) 확인
     if ! command -v "$GSUTIL_PATH" &> /dev/null; then
@@ -361,6 +417,10 @@ main() {
             --debug)
                 debug_mode=true
                 shift
+                ;;
+            --setup-cron)
+                setup_cron_guide
+                exit 0
                 ;;
             --help)
                 usage

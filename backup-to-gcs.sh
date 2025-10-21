@@ -19,12 +19,14 @@ NC='\033[0m' # No Color
 # 설정 섹션 (사용자 수정 영역)
 # =============================================================================
 
+# 🚨 서비스 계정 키 파일 절대 경로 (필수)
+# SERVICE_ACCOUNT_KEY="/home/gpuadmin/private_service/secret_keys/hist-poc-use-cases-54b0305f7e4e.json"
+SERVICE_ACCOUNT_KEY="/Users/danniel.kil/Documents/workspace/private_service/secret_keys/hist-poc-use-cases-54b0305f7e4e.json"
+
 # GCS 버킷 설정 (필수)
-# GCS_BUCKET="${GCS_BUCKET:-gs://your-backup-bucket-name}"
 GCS_BUCKET="gs://private_service"
 
 # 프로젝트 ID 설정 (선택사항)
-# GCP_PROJECT_ID="${GCP_PROJECT_ID:-your-project-id}"
 GCP_PROJECT_ID="hist-poc-use-cases"
 
 # 백업 설정 (선택사항)
@@ -47,6 +49,17 @@ BACKUP_SCHEDULE="${BACKUP_SCHEDULE:-0 2 * * *}"
 # 설정 섹션 끝
 # =============================================================================
 
+# crontab 환경 변수 설정 (gsutil 인증을 위해 필수)
+# gsutil/gcloud가 이 환경 변수를 사용하여 서비스 계정 키 파일을 찾습니다.
+export GOOGLE_APPLICATION_CREDENTIALS="$SERVICE_ACCOUNT_KEY"
+
+# 환경 변수 설정이 완료되면, 스크립트 전체에서 사용할 gsutil 경로를 정의합니다.
+GSUTIL_PATH=$(command -v gsutil || echo "/usr/bin/gsutil")
+if [ ! -f "$GSUTIL_PATH" ]; then
+    GSUTIL_PATH="/usr/bin/gsutil" # 일반적인 리눅스 환경 기본 경로로 폴백
+fi
+
+
 # 로그 디렉토리 구조 설정 (/logs/backup/yyyy/mm/dd)
 CURRENT_DATE=$(date +%Y/%m/%d)
 LOG_DIR="./logs/backup/$CURRENT_DATE"
@@ -56,16 +69,6 @@ LOG_FILENAME="backup_$TIMESTAMP.log"
 LOG_FILE="$LOG_DIR/$LOG_FILENAME"
 
 # 백업할 서비스들 정의 (data 또는 logs 폴더가 있는 서비스들)
-# SERVICES=(
-#     "airflow:airflow/logs"
-#     "gitlab:gitlab/data:gitlab/logs"
-#     "grafana:grafana/data"
-#     "jenkins:jenkins/data"
-#     "kong_gateway:kong_gateway/data"
-#     "ollama:ollama/data"
-#     "open_web_ui:open_web_ui/data"
-#     "prometheus:prometheus/data"
-# )
 SERVICES=(
     "airflow:logs"
     "gitlab:data:logs"
@@ -107,6 +110,7 @@ usage() {
     echo ""
     echo -e "${YELLOW}환경변수:${NC}"
     echo "  GCS_BUCKET             기본 GCS 버킷 설정"
+    echo "  GOOGLE_APPLICATION_CREDENTIALS (스크립트 내부에서 설정됨)"
     echo ""
     echo -e "${BLUE}========================================${NC}"
 }
@@ -126,17 +130,27 @@ precheck() {
     # 로그 디렉토리 생성
     create_log_directory
 
-    # Google Cloud SDK 확인
-    if ! command -v gsutil &> /dev/null; then
-        log "${RED}❌ 오류: gsutil이 설치되지 않았습니다.${NC}"
+    # Google Cloud SDK (gsutil) 확인
+    if ! command -v "$GSUTIL_PATH" &> /dev/null; then
+        log "${RED}❌ 오류: gsutil이 설치되지 않았거나 경로를 찾을 수 없습니다: $GSUTIL_PATH${NC}"
         log "${YELLOW}💡 Google Cloud SDK를 설치해주세요: https://cloud.google.com/sdk/docs/install${NC}"
         exit 1
     fi
 
-    # GCS 인증 확인
-    if ! gsutil ls "$GCS_BUCKET" &> /dev/null; then
-        log "${RED}❌ 오류: GCS 버킷에 접근할 수 없습니다.${NC}"
-        log "${YELLOW}💡 인증을 확인하고 버킷 이름을 확인해주세요.${NC}"
+    # 서비스 계정 키 파일 존재 확인
+    if [ ! -f "$SERVICE_ACCOUNT_KEY" ]; then
+        log "${RED}❌ 오류: 서비스 계정 키 파일이 존재하지 않습니다: $SERVICE_ACCOUNT_KEY${NC}"
+        log "${YELLOW}💡 키 파일 경로를 확인하거나, 파일이 서버에 있는지 확인하세요.${NC}"
+        exit 1
+    fi
+    log "${GREEN}✅ 서비스 계정 키 파일 확인 완료${NC}"
+
+
+    # GCS 인증 확인 (서비스 계정을 사용하여 접근 테스트)
+    # gsutil 경로를 명시적으로 사용하여 crontab 환경 문제 방지
+    if ! "$GSUTIL_PATH" ls "$GCS_BUCKET" &> /dev/null; then
+        log "${RED}❌ 오류: GCS 버킷에 접근할 수 없습니다. (버킷 이름 혹은 서비스 계정 권한 문제)${NC}"
+        log "${YELLOW}💡 GCS 버킷 이름($GCS_BUCKET)과 서비스 계정의 'Storage Object Admin' 권한을 확인해주세요.${NC}"
         exit 1
     fi
 
@@ -183,10 +197,12 @@ backup_service() {
 
                 # GCS 업로드
                 local gcs_path="$GCS_BUCKET/$service_name/$(basename "$compressed_file")"
-                if gsutil cp "$compressed_file" "$gcs_path" 2>> "$LOG_FILE"; then
+                # gsutil 경로를 명시적으로 사용하여 crontab 환경 문제 방지
+                if "$GSUTIL_PATH" cp "$compressed_file" "$gcs_path" 2>> "$LOG_FILE"; then
                     log "${GREEN}✅ GCS 업로드 완료: $gcs_path${NC}"
                 else
                     log "${RED}❌ GCS 업로드 실패: $compressed_file${NC}"
+                    log "${RED}   (인증/권한 문제일 수 있습니다. $SERVICE_ACCOUNT_KEY를 확인하세요.)${NC}"
                     backup_success=false
                 fi
 
@@ -286,6 +302,7 @@ main() {
     log "GCS 버킷: $GCS_BUCKET"
     log "로그 파일: $LOG_FILE"
     log "로그 디렉토리: $LOG_DIR"
+    log "인증 키: $SERVICE_ACCOUNT_KEY"
     echo ""
 
     # 드라이 런 모드 확인

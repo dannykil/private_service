@@ -27,3 +27,5 @@
 # /ragas/data
 # /ragas/logs
 /logs
+
+/secret_keys

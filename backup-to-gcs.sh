@@ -187,14 +187,15 @@ precheck() {
     # sudo 권한 확인 (Docker 볼륨 백업을 위해 필요)
     log "${BLUE}🔑 sudo 권한을 확인합니다...${NC}"
     
-    # sudoers에 NOPASSWD 설정이 되어 있는지 확인
-    if sudo -n true 2>/dev/null; then
-        log "${GREEN}✅ sudo 권한 확인 완료 (NOPASSWD 설정됨 - crontab 사용 가능)${NC}"
-    elif sudo -v &> /dev/null; then
-        log "${GREEN}✅ sudo 권한 확인 완료${NC}"
+    # 실제 사용할 tar 명령어로 NOPASSWD 설정 확인
+    # --version은 실제로 아무것도 하지 않으면서 권한만 체크
+    if sudo -n tar --version &> /dev/null; then
+        log "${GREEN}✅ sudo tar 권한 확인 완료 (NOPASSWD 설정됨 - crontab 사용 가능)${NC}"
+    elif sudo -v &> /dev/null && sudo tar --version &> /dev/null; then
+        log "${GREEN}✅ sudo tar 권한 확인 완료${NC}"
         log "${YELLOW}💡 crontab 사용을 원하시면 --setup-cron 옵션을 참고하세요.${NC}"
     else
-        log "${RED}❌ 오류: sudo 권한이 필요합니다.${NC}"
+        log "${RED}❌ 오류: sudo tar 권한이 필요합니다.${NC}"
         log "${YELLOW}💡 Docker 볼륨을 백업하려면 sudo 권한이 필요합니다.${NC}"
         log "${YELLOW}💡 crontab 설정이 필요하면: $0 --setup-cron${NC}"
         exit 1

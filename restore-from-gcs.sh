@@ -65,7 +65,7 @@ SERVICES=(
     "kong_gateway"
     # "ollama"
     # "open_web_ui"
-    # "prometheus"
+    "prometheus"
 )
 
 # 로그 함수

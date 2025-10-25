@@ -19,3 +19,8 @@ AM 사용량 (퍼센트) 쿼리 (대안):
 # 100 * (1 - node_memory_swap_free_bytes / node_memory_swap_total_bytes)
 
 100 * (node_memory_swap_used_bytes / node_memory_swap_total_bytes)
+
+
+# /opt/prometheus_data 부분을 사용자의 실제 경로로 변경하세요.
+# *** 데이터 restore 시 Permission Denied 발생함
+sudo chown -R 65534:65534 /opt/prometheus_data

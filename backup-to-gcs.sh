@@ -77,7 +77,7 @@ SERVICES=(
     "kong_gateway:data"
     # "ollama:data"
     # "open_web_ui:data"
-    # "prometheus:data"
+    "prometheus:data"
 )
 
 # 로그 함수

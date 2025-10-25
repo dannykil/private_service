@@ -72,7 +72,7 @@ LOG_FILE="$LOG_DIR/$LOG_FILENAME"
 SERVICES=(
     # "airflow:logs"
     # "gitlab:data:logs"
-    # "grafana:data"
+    "grafana:data"
     # "jenkins:data"
     "kong_gateway:data"
     # "ollama:data"

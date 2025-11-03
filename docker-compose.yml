@@ -46,6 +46,9 @@ services:
       - '8080:8080'
       # - '8081:8080' # 8081번 포트를 사용하도록 변경
       - '50000:50000'
+    environment:
+      # 호스트에서 확인한 Docker 그룹의 GID로 교체하세요. (예: 999)
+      - DOCKER_GID=999
     volumes:
       # - ./jenkins/data:/var/jenkins_home # 로컬
       - jenkins_home:/var/jenkins_home # 서버

@@ -6,6 +6,14 @@ FROM jenkins/jenkins:lts
 USER root
 RUN apt-get update && apt-get install -y docker.io
 
+# apt-get을 업데이트하고 curl, sudo를 설치 (root 권한으로 실행)
+USER root
+RUN apt-get update && apt-get install -y curl sudo
+
+# docker-compose 설치
+RUN curl -L "https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
+    && chmod +x /usr/local/bin/docker-compose
+
 # Jenkins 사용자로 다시 전환
 USER jenkins
 

@@ -52,8 +52,8 @@ services:
       # Docker-in-Docker 기능을 위한 설정
       - /var/run/docker.sock:/var/run/docker.sock # Docker 소켓 마운트
       - /usr/bin/docker:/usr/bin/docker # Docker 바이너리
-      # - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose # Docker Compose 바이너리
-      - /usr/bin/docker-compose:/usr/bin/docker-compose # Docker Compose 바이너리
+      - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose # Docker Compose 바이너리
+      # - /usr/bin/docker-compose:/usr/bin/docker-compose # Docker Compose 바이너리
   #   restart: unless-stopped
 
   # gitlab:

@@ -1,6 +1,112 @@
-version: '3.7'
+# ====================================== AIRFLOW ENVIRONMENT VARIABLES =======================================
+x-environment: &airflow_environment # Airflow settings.
+  - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+  - AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS=False
+  - AIRFLOW__CORE__LOAD_EXAMPLES=False
+  - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql://airflow:airflow@airflow-postgres:5432/airflow
+  - AIRFLOW__CORE__STORE_DAG_CODE=True
+  - AIRFLOW__CORE__STORE_SERIALIZED_DAGS=True
+  - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
+  - AIRFLOW__WEBSERVER__RBAC=False
+  # Movielens API settings.
+  - AIRFLOW_CONN_MOVIELENS=http://airflow:airflow@movielens
+  - MOVIELENS_USER=airflow
+  - MOVIELENS_PASSWORD=airflow
+# x-airflow-image: &airflow_image apache/airflow:2.0.0-python3.8
+x-airflow-image: &airflow_image apache/airflow:2.10.5-python3.11
+# ====================================== /AIRFLOW ENVIRONMENT VARIABLES ======================================
 
 services:
+  # # 모든 Airflow 컨테이너 시작
+  # docker compose --profile airflow up -d
+
+  # # 모든 Airflow 컨테이너 종료 및 삭제
+  # docker compose --profile airflow down
+
+  # # 상태 확인
+  # docker compose --profile airflow ps
+  airflow-postgres:
+    image: postgres:12-alpine
+    container_name: airflow-postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./airflow/postgres-data:/var/lib/postgresql/data
+    networks:
+      - airflow-network
+    profiles:
+      - airflow
+
+  airflow-init:
+    build:
+      context: ./airflow/docker/airflow-data
+      args:
+        AIRFLOW_BASE_IMAGE: *airflow_image
+    image: airflow-custom:latest
+    container_name: airflow-init
+    depends_on:
+      - airflow-postgres
+    environment: *airflow_environment
+    entrypoint: /bin/bash
+    command: -c 'airflow db upgrade && sleep 5 && airflow users create --username admin --password admin --firstname Anonymous --lastname Admin --role Admin --email admin@example.org'
+    networks:
+      - airflow-network
+    profiles:
+      - airflow
+
+  airflow-webserver:
+    image: airflow-custom:latest
+    container_name: airflow-webserver
+    depends_on:
+      - airflow-postgres
+      - airflow-init
+    ports:
+      # - '8080:8080'
+      - '8000:8080'
+    volumes:
+      - ./airflow/logs:/opt/airflow/logs
+    environment: *airflow_environment
+    command: webserver
+    networks:
+      - airflow-network
+    profiles:
+      - airflow
+
+  airflow-scheduler:
+    image: airflow-custom:latest
+    container_name: airflow-scheduler
+    depends_on:
+      - airflow-postgres
+      - airflow-init
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/data:/data
+      - ./airflow/logs:/opt/airflow/logs
+    environment: *airflow_environment
+    command: scheduler
+    networks:
+      - airflow-network
+    profiles:
+      - airflow
+
+  redis:
+    image: redis:7-alpine # 가볍고 안정적인 Redis 이미지 사용
+    container_name: redis_server
+    ports:
+      - '6379:6379' # Redis 기본 포트
+    volumes:
+      # Redis 데이터 영속성 설정
+      # 1. 데이터 파일 저장 경로 연결 (Redis 기본 AOF 파일)
+      - ./redis/redis_data:/data
+    command: redis-server --appendonly yes # AOF(Append Only File) 영속성 활성화
+    # restart: always
+    profiles:
+      - redis
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -19,6 +125,8 @@ services:
       # - --web.console.libraries=/usr/share/prometheus/console_libraries
       # - --web.console.templates=/usr/share/prometheus/consoles
     restart: unless-stopped
+    profiles:
+      - monitoring
 
   grafana:
     image: grafana/grafana
@@ -35,6 +143,8 @@ services:
     depends_on:
       - prometheus
     restart: unless-stopped
+    profiles:
+      - monitoring
 
   jenkins:
     build:
@@ -50,46 +160,50 @@ services:
       # 호스트에서 확인한 Docker 그룹의 GID로 교체하세요. (예: 999)
       - DOCKER_GID=999
     volumes:
-      # - ./jenkins/data:/var/jenkins_home # 로컬
-      - jenkins_home:/var/jenkins_home # 서버
+      - ./jenkins/data:/var/jenkins_home # 로컬
+      # - jenkins_home:/var/jenkins_home # 서버
       # Docker-in-Docker 기능을 위한 설정
       - /var/run/docker.sock:/var/run/docker.sock # Docker 소켓 마운트
       - /usr/bin/docker:/usr/bin/docker # Docker 바이너리
       - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose # Docker Compose 바이너리
       # - /usr/bin/docker-compose:/usr/bin/docker-compose # Docker Compose 바이너리
-  #   restart: unless-stopped
+    #   restart: unless-stopped
+    profiles:
+      - jenkins
 
-  # gitlab:
-  #   build:
-  #     context: ./gitlab
-  #     dockerfile: ./gitlab/Dockerfile
-  #   image: gitlab/gitlab-ce:latest
-  #   container_name: gitlab
-  #   hostname: 'localhost'
-  #   ports:
-  #     - '443:443'
-  #     - '80:80'
-  #     - '22:22'
-  #   volumes:
-  #     - ./gitlab/config:/etc/gitlab
-  #     - ./gitlab/logs:/var/log/gitlab
-  #     - ./gitlab/data:/var/opt/gitlab
-  #   shm_size: '256m'
-  #   # restart: always
-  #   environment:
-  #     GITLAB_OMNIBUS_CONFIG: |
-  #       gitlab_rails['smtp_enable'] = true;
-  #       gitlab_rails['smtp_address'] = "smtp.gmail.com";
-  #       gitlab_rails['smtp_port'] = 587;
-  #       gitlab_rails['smtp_user_name'] = "danniel.kil@gmail.com";
-  #       gitlab_rails['smtp_password'] = "eaif ruwc neky jzxh";
-  #       gitlab_rails['smtp_domain'] = "gmail.com";
-  #       gitlab_rails['smtp_authentication'] = "login";
-  #       gitlab_rails['smtp_enable_starttls_auto'] = true;
-  #       gitlab_rails['gitlab_email_enabled'] = true;
-  #       gitlab_rails['gitlab_email_from'] = "gitlab_admin_63500f@example.com";
-  #       gitlab_rails['gitlab_email_display_name'] = 'GitLab';
-  #       external_url 'http://localhost';
+  gitlab:
+    build:
+      context: ./gitlab
+      dockerfile: ./gitlab/Dockerfile
+    image: gitlab/gitlab-ce:18.4.2-ce.0
+    container_name: gitlab
+    hostname: 'localhost'
+    ports:
+      - '443:443'
+      - '80:80'
+      - '22:22'
+    volumes:
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/data:/var/opt/gitlab
+    shm_size: '256m'
+    # restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        gitlab_rails['smtp_enable'] = true;
+        gitlab_rails['smtp_address'] = "smtp.gmail.com";
+        gitlab_rails['smtp_port'] = 587;
+        gitlab_rails['smtp_user_name'] = "danniel.kil@gmail.com";
+        gitlab_rails['smtp_password'] = "eaif ruwc neky jzxh";
+        gitlab_rails['smtp_domain'] = "gmail.com";
+        gitlab_rails['smtp_authentication'] = "login";
+        gitlab_rails['smtp_enable_starttls_auto'] = true;
+        gitlab_rails['gitlab_email_enabled'] = true;
+        gitlab_rails['gitlab_email_from'] = "gitlab_admin_63500f@example.com";
+        gitlab_rails['gitlab_email_display_name'] = 'GitLab';
+        external_url 'http://localhost';
+    profiles:
+      - gitlab
 
   # Kong Gateway Database
   kong-database:
@@ -112,12 +226,15 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    profiles:
+      - kong
 
   # Kong Migration (데이터베이스 초기화)
   kong-migration:
     build:
       context: ./kong_gateway
       dockerfile: Dockerfile
+    image: kong-custom:latest
     container_name: kong-migration
     networks:
       - kong-net
@@ -131,12 +248,12 @@ services:
       kong-database:
         condition: service_healthy
     restart: on-failure
+    profiles:
+      - kong
 
   # Kong Gateway
   kong-gateway:
-    build:
-      context: ./kong_gateway
-      dockerfile: Dockerfile
+    image: kong-custom:latest
     container_name: kong-gateway
     networks:
       - kong-net
@@ -161,12 +278,12 @@ services:
       kong-migration:
         condition: service_completed_successfully
     restart: unless-stopped
+    profiles:
+      - kong
 
   # Kong Manager (UI)
   kong-manager:
-    build:
-      context: ./kong_gateway
-      dockerfile: Dockerfile
+    image: kong-custom:latest
     container_name: kong-manager
     networks:
       - kong-net
@@ -186,6 +303,8 @@ services:
       kong-migration:
         condition: service_completed_successfully
     restart: unless-stopped
+    profiles:
+      - kong
 
   # statsd_exporter:
   #   image: prom/statsd-exporter:v0.18.0
@@ -226,6 +345,8 @@ services:
   #   #           capabilities: [gpu]
 
 networks:
+  airflow-network:
+    driver: bridge
   kong-net:
     driver: bridge
 

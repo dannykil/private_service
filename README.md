@@ -630,3 +630,8 @@ private_service/
 scp -r /Users/danniel.kil/Documents/workspace/private_service root@192.168.56.30:/root/private_service
 
 export EDITOR=vim
+
+## 도커 빌드 캐시 정리
+
+docker system df
+docker system prune -a --volumes -f

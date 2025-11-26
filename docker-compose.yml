@@ -17,6 +17,42 @@ x-airflow-image: &airflow_image apache/airflow:2.10.5-python3.11
 # ====================================== /AIRFLOW ENVIRONMENT VARIABLES ======================================
 
 services:
+  qdrant:
+    # Qdrant 공식 Docker 이미지 사용
+    image: qdrant/qdrant:latest
+    container_name: qdrant_server
+
+    # 서버와 웹 UI 포트를 호스트 머신에 바인딩
+    ports:
+      - '6333:6333' # Qdrant API 포트 (데이터 통신)
+      - '6334:6334' # Qdrant Web UI 포트 (시각화 대시보드)
+
+    # 데이터 영속성을 위한 설정
+    volumes:
+      # 1. 벡터 데이터 및 인덱스 저장
+      # 로컬 qdrant_storage 폴더와 컨테이너 내부의 /qdrant/storage 폴더를 연결합니다.
+      - ./qdrant/storage:/qdrant/storage
+      # 2. 서버 설정 파일 저장 (선택 사항이지만 권장)
+      - ./qdrant/config:/qdrant/config
+    profiles:
+      - llm
+
+  qdrant-postgres:
+    image: postgres:15-alpine
+    container_name: qdrant-postgres
+    environment:
+      # 비밀번호, 사용자, DB 이름 설정 (코드가 이 정보를 사용함)
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: langchain_db
+    ports:
+      - '5432:5432'
+    volumes:
+      # 데이터 영속성을 위한 볼륨 설정
+      - ./qdrant/postgres_data:/var/lib/postgresql/data
+    profiles:
+      - llm
+
   # # 모든 Airflow 컨테이너 시작
   # docker compose --profile airflow up -d
 
@@ -83,9 +119,12 @@ services:
       - airflow-postgres
       - airflow-init
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
+      # - ./airflow/dags:/opt/airflow/dags
+      - /Users/danniel.kil/Documents/workspace/search-admin/airflow/dags:/opt/airflow/dags
       - ./airflow/data:/data
       - ./airflow/logs:/opt/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock # Docker 소켓 마운트
+      - /tmp/airflow/data:/tmp/airflow/data # 작업 데이터 디렉토리
     environment: *airflow_environment
     command: scheduler
     networks:

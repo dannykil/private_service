@@ -1,5 +1,6 @@
-# /airflow/data
+/airflow/data
 /airflow/logs
+/airflow/postgres-data
 # /argocd/data
 # /argocd/logs
 /gitlab/data
@@ -23,6 +24,8 @@
 /ollama/data
 # /ollama/logs
 /prometheus/data
+/qdrant/postgres_data
+/redis/redis_data
 # /prometheus/logs
 # /ragas/data
 # /ragas/logs

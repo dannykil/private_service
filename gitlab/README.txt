@@ -32,9 +32,15 @@ git branch -M master
 git add .
 git commit -m "first commit"
 1)  새로운 원격 저장소 추가
+1.1) origin 
+1.2) gitlab
+1.3) github
 git remote add <새로운_원격저장소_이름> <원격저장소_URL>
 git remote add origin https://github.com/dannykil/private_service.git
+git remote set-url --push --delete origin https://bitbucket.hist.co.kr/scm/hx-us/private_service.git
 git remote add personal git@localhost:personal/private_service.git
+git remote add origin git@gitlab.hanjingroup.co.kr:pjt-search/search-iac
+git remote add personal git@localhost:pjt-search/search-iac
 2) 특정 원격 저장소로 푸시
 git push <원격저장소_이름> <브랜치_이름>
 git push origin master

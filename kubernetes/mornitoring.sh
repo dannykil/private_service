@@ -55,8 +55,3 @@ sudo systemctl status node_exporter
 # 2. 프로메테우스 설정 수정(로컬 머신)docker-compose down prometheus
 docker-compose down prometheus
 docker-compose up -d prometheus
-
-# https://192.168.56.30:30000/#/login
-# cat ~/join.sh
-# >>> master 노드에서 토큰 재성성 후 적용
-# kubeadm token create --print-join-command > ~/join.sh

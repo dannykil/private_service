@@ -6,137 +6,256 @@
 
 현재 프로젝트에서 구성 가능한 서비스들은 다음과 같습니다:
 
-| 서비스           | 포트 | 설명                                   |
-| ---------------- | ---- | -------------------------------------- |
-| **Prometheus**   | 9090 | 시계열 데이터베이스 및 모니터링 시스템 |
-| **Grafana**      | 3000 | 데이터 시각화 및 대시보드 플랫폼       |
-| **GitLab**       | 80   | Git 저장소 관리 시스템                 |
-| **Jenkins**      | 8080 | CI/CD 자동화 서버                      |
-| **Kong Gateway** | 8000 | API 게이트웨이 및 마이크로서비스 관리  |
-| **LiteLLM**      | 4000 | LLM API 게이트웨이                     |
-| **n8n**          | 5678 | 워크플로우 자동화 플랫폼               |
-| **Nexus**        | 8081 | 아티팩트 저장소 관리자                 |
-| **RAGAS**        | 8000 | RAG 평가 시스템                        |
+| 서비스           | 프로필     | 포트        | 설명                                   |
+| ---------------- | ---------- | ----------- | -------------------------------------- |
+| **Prometheus**   | monitoring | 9090        | 시계열 데이터베이스 및 모니터링 시스템 |
+| **Grafana**      | monitoring | 3000        | 데이터 시각화 및 대시보드 플랫폼       |
+| **GitLab**       | gitlab     | 80, 443, 22 | Git 저장소 관리 시스템                 |
+| **Jenkins**      | jenkins    | 8080, 50000 | CI/CD 자동화 서버                      |
+| **Kong Gateway** | kong       | 8020, 8030  | API 게이트웨이 및 마이크로서비스 관리  |
+| **Airflow**      | airflow    | 8000, 5432  | 워크플로우 스케줄링 및 모니터링        |
+| **Qdrant**       | llm        | 6333, 6334  | 벡터 데이터베이스                      |
+| **Redis**        | redis      | 6379        | 인메모리 데이터 저장소                 |
+| **n8n**          | n8n        | 5678        | 워크플로우 자동화 플랫폼               |
 
 ## 📋 빠른 시작
+
+### Docker Compose 프로필 (Profile) 사용법
+
+이 프로젝트는 단일 `docker-compose.yml` 파일에서 프로필 기반으로 서비스를 관리합니다.
+
+#### 기본 명령어
+
+```bash
+# 특정 프로필의 서비스 시작
+docker compose --profile <프로필명> up -d
+
+# 특정 프로필의 서비스 종료
+docker compose --profile <프로필명> down
+
+# 특정 프로필의 서비스 상태 확인
+docker compose --profile <프로필명> ps
+
+# 특정 프로필의 서비스 로그 확인
+docker compose --profile <프로필명> logs -f
+```
+
+#### 프로필별 서비스 시작 예시
+
+```bash
+# Prometheus & Grafana (모니터링) 시작
+docker compose --profile monitoring up -d
+
+# Jenkins (CI/CD) 시작
+docker compose --profile jenkins up -d
+
+# GitLab (Git 저장소) 시작
+docker compose --profile gitlab up -d
+
+# Kong Gateway (API 게이트웨이) 시작
+docker compose --profile kong up -d
+
+# Airflow (워크플로우 스케줄러) 시작
+docker compose --profile airflow up -d
+
+# Qdrant (벡터 DB) 시작
+docker compose --profile llm up -d
+
+# Redis (캐시) 시작
+docker compose --profile redis up -d
+
+# n8n (워크플로우 자동화) 시작
+docker compose --profile n8n up -d
+```
+
+#### 여러 프로필 동시 실행
+
+```bash
+# 모니터링 + Jenkins 동시 시작
+docker compose --profile monitoring --profile jenkins up -d
+
+# 모든 서비스 종료
+docker compose --profile monitoring --profile jenkins --profile gitlab --profile kong --profile airflow --profile llm --profile redis --profile n8n down
+```
 
 ### 1. 서비스 상태 확인
 
 ```bash
-./check-services.sh
-```
+# 실행 중인 모든 컨테이너 확인
+docker ps
 
-### 2. 서비스 관리 스크립트 사용
+# 모든 컨테이너 확인 (중지된 것 포함)
+docker ps -a
 
-```bash
-# 모든 서비스 상태 확인
-./manage-services.sh status
-
-# 특정 서비스 시작
-./manage-services.sh start prometheus
-
-# 특정 서비스 중지
-./manage-services.sh stop grafana
-
-# 모든 서비스 시작
-./manage-services.sh start-all
-
-# 모든 서비스 중지
-./manage-services.sh stop-all
-
-# 서비스 로그 확인
-./manage-services.sh logs jenkins
-
-# 서비스 초기 설정
-./manage-services.sh setup gitlab
-```
-
-### 3. 개별 서비스 시작 (기존 방식)
-
-```bash
-# Prometheus & Grafana 시작 (이미 실행 중)
-cd prometheus && docker-compose up -d && cd ..
-cd grafana && docker-compose up -d && cd ..
-
-# 새로운 서비스 시작 예시
-cd jenkins && docker-compose up -d && cd ..
+# 특정 프로필 서비스 상태
+docker compose --profile monitoring ps
 ```
 
 ## 🔧 서비스별 설정 및 사용법
 
 ### Prometheus (모니터링)
 
+- **프로필**: `monitoring`
 - **웹 UI**: http://localhost:9090
 - **기능**: 시계열 데이터 수집 및 쿼리
 - **설정**: `prometheus/prometheus.yml`
+- **시작**: `docker compose --profile monitoring up -d`
 
 ### Grafana (대시보드)
 
+- **프로필**: `monitoring`
 - **웹 UI**: http://localhost:3000
 - **기본 계정**: admin / admin
 - **기능**: 데이터 시각화 및 대시보드 생성
+- **데이터 저장**: `./grafana/data`
+- **시작**: `docker compose --profile monitoring up -d`
 
 ### GitLab (Git 저장소)
 
+- **프로필**: `gitlab`
 - **웹 UI**: http://localhost
-- **SSH Git**: localhost:2222
+- **HTTPS**: https://localhost:443
+- **SSH Git**: localhost:22
 - **기능**: Git 저장소 호스팅 및 프로젝트 관리
+- **데이터 저장**: `./gitlab/data`, `./gitlab/logs`, `./gitlab/config`
+- **시작**: `docker compose --profile gitlab up -d`
+- **초기 비밀번호**: `./gitlab/config/initial_root_password` 참조
 
 ### Jenkins (CI/CD)
 
+- **프로필**: `jenkins`
 - **웹 UI**: http://localhost:8080
+- **Agent 포트**: 50000
 - **기능**: 빌드, 테스트, 배포 자동화
+- **데이터 저장**: `./jenkins/data`
+- **시작**: `docker compose --profile jenkins up -d`
+- **Docker-in-Docker**: 지원 (Docker 소켓 마운트)
 
 ### Kong Gateway (API 게이트웨이)
 
-- **프록시**: http://localhost:8000
-- **관리 API**: http://localhost:8001
-- **관리 UI**: http://localhost:1337 (Konga)
+- **프로필**: `kong`
+- **프록시**: http://localhost:8020
+- **관리 API**: http://localhost:8030
+- **관리 UI**: http://localhost:22222
 - **기능**: API 라우팅, 인증, 속도 제한 등
+- **데이터베이스**: PostgreSQL (내장)
+- **시작**: `docker compose --profile kong up -d`
 
-### LiteLLM (LLM 게이트웨이)
+### Airflow (워크플로우 스케줄러)
 
-- **API**: http://localhost:4000
-- **기능**: 다양한 LLM 서비스 통합 API
-- **환경변수**: API 키 설정 필요
+- **프로필**: `airflow`
+- **웹 UI**: http://localhost:8000
+- **기본 계정**: admin / admin
+- **기능**: 데이터 파이프라인 스케줄링 및 모니터링
+- **DAG 경로**: `/Users/danniel.kil/Documents/workspace/search-admin/airflow/dags`
+- **데이터 저장**: `./airflow/data`, `./airflow/logs`, `./airflow/postgres-data`
+- **시작**: `docker compose --profile airflow up -d`
+
+### Qdrant (벡터 데이터베이스)
+
+- **프로필**: `llm`
+- **API**: http://localhost:6333
+- **웹 UI**: http://localhost:6334
+- **기능**: 벡터 검색 및 유사도 검색
+- **데이터 저장**: `./qdrant/storage`, `./qdrant/config`
+- **PostgreSQL**: localhost:5432 (metadata 저장)
+- **시작**: `docker compose --profile llm up -d`
+
+### Redis (캐시 서버)
+
+- **프로필**: `redis`
+- **포트**: 6379
+- **기능**: 인메모리 데이터 저장소, 캐싱, 세션 관리
+- **데이터 저장**: `./redis/redis_data`
+- **영속성**: AOF (Append Only File) 활성화
+- **시작**: `docker compose --profile redis up -d`
 
 ### n8n (워크플로우 자동화)
 
+- **프로필**: `n8n`
 - **웹 UI**: http://localhost:5678
-- **기능**: 노코드/로우코드 자동화 플랫폼
-
-### Nexus (아티팩트 저장소)
-
-- **웹 UI**: http://localhost:8081
-- **기능**: Maven, npm, Docker 이미지 등 저장소 관리
-
-### RAGAS (RAG 평가)
-
-- **API**: http://localhost:8000
-- **기능**: RAG 시스템 평가 및 벤치마킹
+- **기본 계정**: admin / admin
+- **기능**: 노코드/로우코드 자동화 플랫폼, 다양한 서비스 연동
+- **데이터 저장**: `./n8n/data`
+- **타임존**: Asia/Seoul
+- **시작**: `docker compose --profile n8n up -d`
+- **특징**:
+  - 워크플로우, 자격증명, 실행 데이터 영구 저장
+  - 300개 이상의 앱 통합 지원
+  - 시각적 워크플로우 빌더
 
 ## 🛠️ 개발자용 설정
 
-### 환경변수 설정 (선택사항)
+### Docker Compose 프로필 관리 팁
 
 ```bash
-# LiteLLM API 키 설정
-export OPENAI_API_KEY="your-openai-api-key"
-export ANTHROPIC_API_KEY="your-anthropic-api-key"
+# 자주 사용하는 프로필 조합을 alias로 설정
+alias dc-dev="docker compose --profile monitoring --profile redis"
+alias dc-all="docker compose --profile monitoring --profile jenkins --profile gitlab --profile kong --profile airflow --profile llm --profile redis --profile n8n"
+
+# 사용 예시
+dc-dev up -d      # 개발 환경 시작
+dc-all down       # 모든 서비스 종료
+```
+
+### 환경변수 설정
+
+```bash
+# Airflow 설정 (필요시)
+export AIRFLOW__CORE__EXECUTOR=LocalExecutor
+export AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql://airflow:airflow@localhost:5432/airflow
+
+# Qdrant 설정 (필요시)
+export QDRANT_HOST=localhost
+export QDRANT_PORT=6333
+
+# n8n 추가 설정 (필요시)
+export N8N_ENCRYPTION_KEY="your-encryption-key"
 ```
 
 ### 사용자 정의 설정
 
-각 서비스 디렉토리에서 `docker-compose.yml` 파일을 수정하여 설정을 변경할 수 있습니다.
+`docker-compose.yml` 파일을 수정하여 설정을 변경할 수 있습니다:
+
+```bash
+# docker-compose.yml 편집
+vim docker-compose.yml
+
+# 변경 사항 적용
+docker compose --profile <프로필명> down
+docker compose --profile <프로필명> up -d
+```
 
 ### 로그 확인
 
 ```bash
-# 특정 서비스 로그
-./manage-services.sh logs 서비스명
+# 특정 프로필의 모든 서비스 로그
+docker compose --profile monitoring logs -f
 
-# 또는 직접 확인
-cd 서비스명 && docker-compose logs -f
+# 특정 컨테이너 로그
+docker logs -f grafana
+docker logs -f prometheus
+docker logs -f n8n
+
+# 최근 100줄만 확인
+docker logs --tail 100 jenkins
+```
+
+### 데이터 백업 (컨테이너 삭제 전)
+
+```bash
+# 중요 데이터가 저장되는 디렉토리들
+./grafana/data          # Grafana 대시보드 및 설정
+./jenkins/data          # Jenkins 작업 및 플러그인
+./gitlab/data           # GitLab 저장소 및 데이터
+./prometheus/data       # Prometheus 메트릭 데이터
+./airflow/logs          # Airflow 로그
+./qdrant/storage        # Qdrant 벡터 데이터
+./redis/redis_data      # Redis 데이터
+./n8n/data              # n8n 워크플로우 및 자격증명
+
+# 백업 예시
+tar -czf backup_$(date +%Y%m%d).tar.gz ./grafana/data ./jenkins/data ./n8n/data
 ```
 
 ### 문제 해결
@@ -145,11 +264,68 @@ cd 서비스명 && docker-compose logs -f
 # 컨테이너 상태 확인
 docker ps -a
 
+# 특정 프로필 서비스 상태
+docker compose --profile monitoring ps
+
 # 시스템 자원 확인
 docker system df
 
-# 로그 정리
+# 특정 컨테이너 재시작
+docker restart grafana
+docker restart n8n
+
+# 로그로 문제 진단
+docker logs --tail 50 jenkins
+
+# 컨테이너 내부 접속 (디버깅)
+docker exec -it n8n /bin/sh
+docker exec -it grafana /bin/bash
+
+# 네트워크 문제 확인
+docker network ls
+docker network inspect private_service_default
+
+# 포트 충돌 확인
+netstat -tuln | grep <포트번호>
+lsof -i :<포트번호>
+
+# 로그 및 캐시 정리
 docker system prune
+docker volume prune
+```
+
+### 일반적인 문제 해결
+
+#### 포트 충돌
+
+```bash
+# 포트 사용 중인 프로세스 확인
+lsof -i :5678  # n8n 포트 예시
+
+# 프로세스 종료
+kill -9 <PID>
+```
+
+#### 데이터 복원 안됨
+
+```bash
+# 볼륨 권한 확인
+ls -la ./n8n/data
+ls -la ./grafana/data
+
+# 권한 수정 (필요시)
+sudo chown -R $USER:$USER ./n8n/data
+```
+
+#### 서비스 응답 없음
+
+```bash
+# 컨테이너 재시작
+docker compose --profile n8n restart
+
+# 전체 재시작
+docker compose --profile n8n down
+docker compose --profile n8n up -d
 ```
 
 ## 💾 데이터 백업 (GCS - Google Cloud Storage)
@@ -303,14 +479,15 @@ tail -f ./logs/backup/cron.log
 
 현재 백업이 구성된 서비스들:
 
-- **Airflow**: `airflow/logs`
-- **GitLab**: `gitlab/data`, `gitlab/logs`
+- **Airflow**: `airflow/logs`, `airflow/postgres-data`
+- **GitLab**: `gitlab/data`, `gitlab/logs`, `gitlab/config`
 - **Grafana**: `grafana/data`
 - **Jenkins**: `jenkins/data`
 - **Kong Gateway**: `kong_gateway/data`
-- **Ollama**: `ollama/data`
-- **Open Web UI**: `open_web_ui/data`
 - **Prometheus**: `prometheus/data`
+- **Qdrant**: `qdrant/storage`, `qdrant/postgres_data`
+- **Redis**: `redis/redis_data`
+- **n8n**: `n8n/data`
 
 ### 백업 특징
 
@@ -422,9 +599,10 @@ logs/backup/
 - **Grafana**
 - **Jenkins**
 - **Kong Gateway**
-- **Ollama**
-- **Open Web UI**
 - **Prometheus**
+- **Qdrant**
+- **Redis**
+- **n8n**
 
 ### 복원 특징
 
@@ -574,56 +752,281 @@ mv restored/grafana/data grafana/data
 
 ```
 private_service/
-├── docker-compose.yml          # 메인 설정 (현재 사용 안함)
-├── check-services.sh          # 서비스 상태 확인 스크립트
-├── manage-services.sh         # 서비스 관리 스크립트
+├── docker-compose.yml          # 통합 Docker Compose 설정 (프로필 기반)
 ├── backup-to-gcs.sh           # GCS 백업 스크립트 (통합 설정 포함)
 ├── restore-from-gcs.sh        # GCS 복원 스크립트
+├── clean-images.sh            # Docker 이미지 정리 스크립트
 ├── README.md                  # 프로젝트 문서
+│
 ├── logs/                      # 로그 디렉토리
 │   ├── backup/               # 백업 로그 (YYYY/MM/DD 구조)
 │   └── restore/              # 복원 로그 (YYYY/MM/DD 구조)
+│
+├── backups/                   # 로컬 백업 디렉토리
+│   ├── grafana/
+│   ├── kong_gateway/
+│   └── prometheus/
+│
 ├── restored/                  # 복원된 데이터 임시 디렉토리
-├── prometheus/                # 프로메테우스 설정 및 데이터
+│
+├── secret_keys/               # GCS 서비스 계정 키 저장소
+│   └── *.json
+│
+├── prometheus/                # Prometheus (프로필: monitoring)
 │   ├── prometheus.yml
-│   └── data/
-├── grafana/                   # 그라파나 설정 및 데이터
-│   └── data/
-├── gitlab/                    # GitLab 설정
-│   └── docker-compose.yml
-├── jenkins/                   # Jenkins 설정
-│   └── docker-compose.yml
-├── kong_gateway/              # Kong 게이트웨이 설정
-│   └── docker-compose.yml
-├── lite_llm/                  # LiteLLM 설정
-│   └── docker-compose.yml
-├── n8n/                       # n8n 설정
-│   └── docker-compose.yml
-├── nexus/                     # Nexus 설정
-│   └── docker-compose.yml
-└── ragas/                     # RAGAS 설정
-    └── docker-compose.yml
+│   ├── data/
+│   ├── Dockerfile
+│   └── README.txt
+│
+├── grafana/                   # Grafana (프로필: monitoring)
+│   ├── data/
+│   ├── Dockerfile
+│   └── README.txt
+│
+├── gitlab/                    # GitLab (프로필: gitlab)
+│   ├── config/
+│   ├── data/
+│   ├── logs/
+│   ├── Dockerfile
+│   └── README.txt
+│
+├── jenkins/                   # Jenkins (프로필: jenkins)
+│   ├── data/
+│   ├── Dockerfile
+│   ├── Jenkinsfile
+│   └── README.txt
+│
+├── kong_gateway/              # Kong Gateway (프로필: kong)
+│   ├── data/
+│   ├── Dockerfile
+│   ├── kong_init.sh
+│   └── README.txt
+│
+├── airflow/                   # Airflow (프로필: airflow)
+│   ├── dags/
+│   ├── data/
+│   ├── logs/
+│   ├── postgres-data/
+│   ├── plugins/
+│   └── docker/
+│       └── airflow-data/
+│           └── Dockerfile
+│
+├── qdrant/                    # Qdrant (프로필: llm)
+│   ├── storage/
+│   ├── config/
+│   └── postgres_data/
+│
+├── redis/                     # Redis (프로필: redis)
+│   ├── redis_data/
+│   └── README.txt
+│
+├── n8n/                       # n8n (프로필: n8n)
+│   └── data/                 # 워크플로우, 자격증명, 실행 데이터
+│
+├── argocd/                    # ArgoCD (미구성)
+├── kubernetes/                # Kubernetes 설정
+│   ├── docker/
+│   ├── resources/
+│   └── install scripts
+│
+├── lite_llm/                  # LiteLLM (미구성)
+│   └── README.txt
+│
+├── nexus/                     # Nexus (미구성)
+│
+├── ollama/                    # Ollama (주석 처리)
+│   ├── data/
+│   ├── Dockerfile
+│   └── README.txt
+│
+├── open_web_ui/               # Open WebUI (주석 처리)
+│   ├── data/
+│   ├── Dockerfile
+│   └── README.txt
+│
+└── ragas/                     # RAGAS (미구성)
+    └── README.txt
 ```
+
+### 프로필별 서비스 그룹
+
+| 프로필       | 서비스                                                               | 용도                |
+| ------------ | -------------------------------------------------------------------- | ------------------- |
+| `monitoring` | prometheus, grafana                                                  | 시스템 모니터링     |
+| `gitlab`     | gitlab                                                               | Git 저장소          |
+| `jenkins`    | jenkins                                                              | CI/CD 파이프라인    |
+| `kong`       | kong-database, kong-migration, kong-gateway, kong-manager            | API 게이트웨이      |
+| `airflow`    | airflow-postgres, airflow-init, airflow-webserver, airflow-scheduler | 워크플로우 스케줄러 |
+| `llm`        | qdrant, qdrant-postgres                                              | 벡터 DB 및 LLM 지원 |
+| `redis`      | redis                                                                | 캐시 및 세션 저장소 |
+| `n8n`        | n8n                                                                  | 워크플로우 자동화   |
 
 ## 🚨 주의사항
 
 1. **포트 충돌**: 각 서비스가 사용하는 포트가 충돌하지 않도록 확인하세요.
+
+   - Grafana: 3000
+   - n8n: 5678
+   - Airflow: 8000
+   - Jenkins: 8080
+   - Kong: 8020, 8030, 22222
+   - Prometheus: 9090
+   - Redis: 6379
+   - Qdrant: 6333, 6334
+
 2. **자원 사용량**: 모든 서비스를 동시에 실행하면 많은 시스템 자원을 사용합니다.
-3. **데이터 영구성**: 각 서비스의 데이터는 Docker 볼륨에 저장되므로 컨테이너 재생성 시 데이터가 유지됩니다.
-4. **보안**: 프로덕션 환경에서는 적절한 보안 설정을 적용하세요.
+
+   - 최소 권장: RAM 16GB, Disk 50GB
+   - 전체 실행 시: RAM 32GB+, Disk 100GB+
+
+3. **데이터 영구성**: 각 서비스의 데이터는 로컬 디렉토리에 마운트되므로 컨테이너 재생성 시에도 데이터가 유지됩니다.
+
+   - 데이터 손실 방지를 위해 정기적인 백업 권장
+   - `./backup-to-gcs.sh` 사용 권장
+
+4. **보안**: 프로덕션 환경에서는 반드시 적절한 보안 설정을 적용하세요.
+
+   - 기본 비밀번호 변경 (admin/admin 등)
+   - HTTPS 설정
+   - 방화벽 규칙 적용
+   - 민감한 데이터 암호화
+
+5. **프로필 관리**: 필요한 서비스만 선택적으로 실행하세요.
+
+   ```bash
+   # 개발 환경 예시
+   docker compose --profile monitoring --profile redis up -d
+
+   # 전체 환경 예시
+   docker compose --profile monitoring --profile jenkins --profile gitlab --profile kong --profile airflow --profile llm --profile redis --profile n8n up -d
+   ```
+
+6. **데이터 디렉토리 권한**: 일부 서비스는 특정 권한이 필요할 수 있습니다.
+   ```bash
+   # 필요시 권한 조정
+   sudo chown -R $USER:$USER ./n8n/data
+   sudo chown -R $USER:$USER ./grafana/data
+   ```
 
 ## 🤝 기여
 
 새로운 서비스를 추가하려면:
 
-1. 해당 서비스 디렉토리 생성
-2. `docker-compose.yml` 파일 작성
-3. `check-services.sh`와 `manage-services.sh`에 서비스 정보 추가
-4. 문서 업데이트
+1. `docker-compose.yml`에 서비스 정의 추가
+
+   ```yaml
+   new-service:
+     image: service/image:tag
+     container_name: new-service
+     ports:
+       - '포트:포트'
+     volumes:
+       - ./new-service/data:/data
+     profiles:
+       - new-service
+   ```
+
+2. 데이터 디렉토리 생성
+
+   ```bash
+   mkdir -p ./new-service/data
+   ```
+
+3. README.md 업데이트
+
+   - 서비스 목록 테이블에 추가
+   - 서비스별 설정 섹션 추가
+   - 프로젝트 구조 업데이트
+
+4. 백업 스크립트 업데이트 (필요시)
+
+   - `backup-to-gcs.sh`에 서비스 추가
+   - `restore-from-gcs.sh`에 서비스 추가
+
+5. 테스트
+   ```bash
+   docker compose --profile new-service up -d
+   docker compose --profile new-service ps
+   docker compose --profile new-service logs -f
+   ```
 
 ## 📞 지원
 
-문제 발생 시 로그를 확인하고, 필요시 각 서비스의 공식 문서를 참조하세요.
+문제 발생 시:
+
+1. **로그 확인**
+
+   ```bash
+   docker compose --profile <프로필명> logs -f
+   docker logs <컨테이너명>
+   ```
+
+2. **서비스 상태 확인**
+
+   ```bash
+   docker compose --profile <프로필명> ps
+   docker ps -a
+   ```
+
+3. **공식 문서 참조**
+
+   - [Docker Compose](https://docs.docker.com/compose/)
+   - [Prometheus](https://prometheus.io/docs/)
+   - [Grafana](https://grafana.com/docs/)
+   - [GitLab](https://docs.gitlab.com/)
+   - [Jenkins](https://www.jenkins.io/doc/)
+   - [Kong](https://docs.konghq.com/)
+   - [Airflow](https://airflow.apache.org/docs/)
+   - [Qdrant](https://qdrant.tech/documentation/)
+   - [Redis](https://redis.io/documentation)
+   - [n8n](https://docs.n8n.io/)
+
+4. **일반적인 문제 해결**
+   - 포트 충돌: `lsof -i :<포트>` 확인
+   - 권한 문제: `sudo chown -R $USER:$USER <디렉토리>`
+   - 디스크 공간: `docker system df` 확인
+   - 메모리 부족: 불필요한 서비스 종료
+
+## 📚 추가 자료
+
+### 유용한 Docker 명령어
+
+```bash
+# 모든 컨테이너 중지
+docker stop $(docker ps -q)
+
+# 사용하지 않는 이미지 정리
+docker image prune -a
+
+# 볼륨 확인
+docker volume ls
+
+# 네트워크 확인
+docker network ls
+
+# 리소스 사용량 확인
+docker stats
+
+# 컨테이너 리소스 제한
+docker update --memory 2g --cpus 2 <컨테이너명>
+```
+
+### 프로필 조합 예시
+
+```bash
+# 기본 개발 환경
+docker compose --profile monitoring --profile redis up -d
+
+# 풀스택 개발 환경
+docker compose --profile monitoring --profile jenkins --profile gitlab --profile redis up -d
+
+# AI/ML 개발 환경
+docker compose --profile monitoring --profile llm --profile n8n --profile redis up -d
+
+# 전체 프로덕션 환경
+docker compose --profile monitoring --profile jenkins --profile gitlab --profile kong --profile airflow --profile llm --profile redis --profile n8n up -d
+```
 
 ## 폴더 복사
 

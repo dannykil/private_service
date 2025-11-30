@@ -41,6 +41,7 @@ git remote set-url --push --delete origin https://bitbucket.hist.co.kr/scm/hx-us
 git remote add personal git@localhost:personal/private_service.git
 git remote add origin git@gitlab.hanjingroup.co.kr:pjt-search/search-iac
 git remote add personal git@localhost:pjt-search/search-iac
+git remote add company git@bitbucket.hist.co.kr/scm/hx-us/private_service
 2) 특정 원격 저장소로 푸시
 git push <원격저장소_이름> <브랜치_이름>
 git push origin master

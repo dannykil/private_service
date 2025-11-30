@@ -16,6 +16,15 @@ x-environment: &airflow_environment # Airflow settings.
 x-airflow-image: &airflow_image apache/airflow:2.10.5-python3.11
 # ====================================== /AIRFLOW ENVIRONMENT VARIABLES ======================================
 
+# # 모든 Airflow 컨테이너 시작
+# docker compose --profile airflow up -d
+
+# # 모든 Airflow 컨테이너 종료 및 삭제
+# docker compose --profile airflow down
+
+# # 상태 확인
+# docker compose --profile airflow ps
+
 services:
   qdrant:
     # Qdrant 공식 Docker 이미지 사용
@@ -53,16 +62,9 @@ services:
     profiles:
       - llm
 
-  # # 모든 Airflow 컨테이너 시작
-  # docker compose --profile airflow up -d
-
-  # # 모든 Airflow 컨테이너 종료 및 삭제
-  # docker compose --profile airflow down
-
-  # # 상태 확인
-  # docker compose --profile airflow ps
   airflow-postgres:
     image: postgres:12-alpine
+    # image: postgres:15-alpine
     container_name: airflow-postgres
     environment:
       - POSTGRES_USER=airflow
@@ -344,6 +346,33 @@ services:
     restart: unless-stopped
     profiles:
       - kong
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - '5678:5678' # n8n 웹 인터페이스 포트
+    environment:
+      # 기본 설정
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin
+      # 타임존 설정
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - TZ=Asia/Seoul
+      # 데이터 저장 경로
+      - N8N_USER_FOLDER=/home/node/.n8n
+      # 워크플로우 실행 데이터 저장
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_PROGRESS=true
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+    volumes:
+      # n8n 데이터 영속성 설정 (워크플로우, 자격증명, 실행 데이터 등)
+      - ./n8n/data:/home/node/.n8n
+    restart: unless-stopped
+    profiles:
+      - n8n
 
   # statsd_exporter:
   #   image: prom/statsd-exporter:v0.18.0

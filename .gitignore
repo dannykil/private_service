@@ -32,3 +32,4 @@
 /logs
 
 /secret_keys
+/qdrant/storage/collections

@@ -374,6 +374,22 @@ services:
     profiles:
       - n8n
 
+  portainer: # admin // administrator
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - '9000:9000' # Portainer 웹 UI 포트
+      - '9443:9443' # Portainer HTTPS 포트
+      - '8050:8000' # Edge Agent 포트 (선택사항)
+    volumes:
+      # Portainer 데이터 영속성 설정 (설정, 사용자, 템플릿 등)
+      - ./portainer/data:/data
+      # Docker 소켓 마운트 (Docker 환경 관리를 위해 필수)
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    profiles:
+      - portainer
+
   # statsd_exporter:
   #   image: prom/statsd-exporter:v0.18.0
   #   restart: always

@@ -15,8 +15,8 @@
 # /kubernetes/logs
 # /lite_llm/data
 # /lite_llm/logs
-# /n8n/data
-# /n8n/logs
+/n8n/data/.cache
+/n8n/data/.n8n
 # /nexus/data
 # /nexus/logs
 /open_web_ui/data
@@ -26,6 +26,7 @@
 /prometheus/data
 /qdrant/postgres_data
 /redis/redis_data
+/portainer/data
 # /prometheus/logs
 # /ragas/data
 # /ragas/logs

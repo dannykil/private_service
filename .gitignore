@@ -25,6 +25,7 @@
 # /ollama/logs
 /prometheus/data
 /qdrant/postgres_data
+/qdrant/storage/collections
 /redis/redis_data
 /portainer/data
 # /prometheus/logs

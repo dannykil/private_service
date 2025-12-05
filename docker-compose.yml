@@ -46,19 +46,41 @@ services:
     profiles:
       - llm
 
-  qdrant-postgres:
-    image: postgres:15-alpine
-    container_name: qdrant-postgres
+  # qdrant-postgres:
+  #   image: postgres:15-alpine
+  #   container_name: qdrant-postgres
+  #   environment:
+  #     # 비밀번호, 사용자, DB 이름 설정 (코드가 이 정보를 사용함)
+  #     POSTGRES_USER: user
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: langchain_db
+  #   ports:
+  #     - '5432:5432'
+  #   volumes:
+  #     # 데이터 영속성을 위한 볼륨 설정
+  #     - ./qdrant/postgres_data:/var/lib/postgresql/data
+  #   profiles:
+  #     - llm
+
+  postgres-vector:
+    image: pgvector/pgvector:pg15
+    container_name: postgres-vector
     environment:
-      # 비밀번호, 사용자, DB 이름 설정 (코드가 이 정보를 사용함)
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: langchain_db
+      POSTGRES_INITDB_ARGS: '-E UTF8'
     ports:
       - '5432:5432'
     volumes:
-      # 데이터 영속성을 위한 볼륨 설정
       - ./qdrant/postgres_data:/var/lib/postgresql/data
+      - ./qdrant/init.sql:/docker-entrypoint-initdb.d/init.sql # 추가
+    command: postgres -c 'port=5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U user -d langchain_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
     profiles:
       - llm
 
@@ -409,29 +431,51 @@ services:
   #     - ./open_web_ui/data:/app/backend/data # Open WebUI 데이터 볼륨
   #   restart: unless-stopped
 
-  # ollama:
-  #   # image: ollama/ollama:latest
-  #   build:
-  #     context: ./ollama
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - '11434:11434'
-  #   volumes:
-  #     - ./ollama/data:/root/.ollama # Ollama 데이터 볼륨
-  #   restart: unless-stopped
-  #   # Ollama가 GPU를 사용하도록 설정 (선택 사항)
-  #   # deploy:
-  #   #   resources:
-  #   #     reservations:
-  #   #       devices:
-  #   #         - driver: nvidia
-  #   #           count: all
-  #   #           capabilities: [gpu]
+  # ====================================== OLLAMA SERVICE =======================================
+  # Ollama - Local LLM Model Serving
+  # Profile: llm
+  # Start: docker compose --profile llm up -d
+  # Stop: docker compose --profile llm down
+  # Access: http://localhost:11434
+  # Pull models: docker exec -it ollama ollama pull llama2
+  # ====================================== /OLLAMA SERVICE ======================================
+
+  ollama:
+    # image: ollama/ollama:latest
+    build:
+      context: ./ollama
+      dockerfile: Dockerfile
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - '11434:11434' # Ollama API 포트
+    environment:
+      # Ollama 설정
+      - OLLAMA_HOST=0.0.0.0
+      # GPU 메모리 제한 설정 (선택 사항)
+      # - OLLAMA_MAX_LOADED_MODELS=1
+      # - OLLAMA_NUM_PARALLEL=1
+    volumes:
+      # Ollama 데이터 영속성 설정 (모델, 설정 등)
+      - ./ollama/data:/root/.ollama
+    restart: unless-stopped
+    profiles:
+      - llm
+    # Ollama가 GPU를 사용하도록 설정 (NVIDIA GPU가 있는 경우)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
 
 networks:
   airflow-network:
     driver: bridge
   kong-net:
+    driver: bridge
+  dify-network:
     driver: bridge
 
 volumes:

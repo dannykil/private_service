@@ -470,12 +470,35 @@ services:
     #           count: all
     #           capabilities: [gpu]
 
+  # ====================================== MODEL GEMMA SERVICE =======================================
+  # Model Gemma - LLM Serving Server
+  # Profile: llm
+  # Start: docker compose --profile llm up -d
+  # Access: http://localhost:8001
+  # Health check: http://localhost:8001/health
+  # ====================================== /MODEL GEMMA SERVICE ======================================
+
+  model-gemma:
+    build:
+      context: ./model_gemma
+      dockerfile: Dockerfile
+    image: model-gemma:latest
+    container_name: model-gemma
+    ports:
+      - '8001:8001' # FastAPI 서버 포트
+    environment:
+      # Ollama 연결 설정 (컨테이너 내부에서 ollama 서비스에 접근)
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    profiles:
+      - llm
+
 networks:
   airflow-network:
     driver: bridge
   kong-net:
-    driver: bridge
-  dify-network:
     driver: bridge
 
 volumes:
